@@ -11,11 +11,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let jobId: string;
+  
   try {
-    const { jobId } = await req.json();
+    const requestBody = await req.json();
+    jobId = requestBody.jobId;
     
     if (!jobId) {
       throw new Error("Job ID is required");
+    }
+
+    console.log("Processing job:", jobId);
+
+    // Get API key from environment
+    const removeBgApiKey = Deno.env.get("REMOVE_BG_API_KEY");
+    if (!removeBgApiKey) {
+      throw new Error("Remove.bg API key not configured");
     }
 
     // Create Supabase client with service role key
@@ -33,8 +44,10 @@ serve(async (req) => {
       .single();
 
     if (jobError || !job) {
-      throw new Error("Job not found");
+      throw new Error(`Job not found: ${jobError?.message}`);
     }
+
+    console.log("Found job:", job.original_file_path);
 
     // Update job status to processing
     await supabaseAdmin
@@ -48,26 +61,66 @@ serve(async (req) => {
       .download(job.original_file_path);
 
     if (downloadError || !imageData) {
-      throw new Error("Failed to download original image");
+      throw new Error(`Failed to download original image: ${downloadError?.message}`);
     }
 
-    // Convert image to blob for processing
-    const imageBlob = imageData;
+    console.log("Downloaded original image, size:", imageData.size);
+
+    // Call remove.bg API
+    const formData = new FormData();
+    formData.append('image_file', imageData, 'image.jpg');
+    formData.append('size', 'auto');
+
+    console.log("Calling remove.bg API...");
     
-    // For now, we'll simulate processing by copying the original
-    // In a real implementation, you would call an AI service like remove.bg here
-    const processedFileName = `${job.user_id}/${Date.now()}_processed.png`;
+    const removeBgResponse = await fetch('https://api.remove.bg/v1.0/removebg', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': removeBgApiKey,
+      },
+      body: formData,
+    });
+
+    if (!removeBgResponse.ok) {
+      const errorText = await removeBgResponse.text();
+      throw new Error(`Remove.bg API error: ${removeBgResponse.status} - ${errorText}`);
+    }
+
+    const processedImageBlob = await removeBgResponse.blob();
+    console.log("Received processed image from remove.bg, size:", processedImageBlob.size);
+
+    // Upload processed image to storage
+    const processedFileName = `${job.user_id}/${Date.now()}_no_bg.png`;
     
-    // Upload processed image (for demo, we're just uploading the original)
     const { error: uploadError } = await supabaseAdmin.storage
       .from('processed')
-      .upload(processedFileName, imageBlob, {
+      .upload(processedFileName, processedImageBlob, {
         contentType: 'image/png'
       });
 
     if (uploadError) {
-      throw new Error("Failed to upload processed image");
+      throw new Error(`Failed to upload processed image: ${uploadError.message}`);
     }
+
+    console.log("Uploaded processed image:", processedFileName);
+
+    // Get current user's profile to increment processed count
+    const { data: currentProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('images_processed')
+      .eq('id', job.user_id)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+    }
+
+    // Update user's processed image count
+    const newCount = (currentProfile?.images_processed || 0) + 1;
+    await supabaseAdmin
+      .from('profiles')
+      .update({ images_processed: newCount })
+      .eq('id', job.user_id);
 
     // Update job with completion status
     await supabaseAdmin
@@ -78,16 +131,14 @@ serve(async (req) => {
       })
       .eq('id', jobId);
 
-    // Update user's processed image count
-    await supabaseAdmin
-      .from('profiles')
-      .update({ 
-        images_processed: supabaseAdmin.sql`images_processed + 1`
-      })
-      .eq('id', job.user_id);
+    console.log("Job completed successfully");
 
     return new Response(
-      JSON.stringify({ success: true, processed_file_path: processedFileName }),
+      JSON.stringify({ 
+        success: true, 
+        processed_file_path: processedFileName,
+        images_processed: newCount
+      }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200 
@@ -98,20 +149,24 @@ serve(async (req) => {
     console.error('Processing error:', error);
     
     // Update job with error status if jobId exists
-    if (req.json && (await req.json()).jobId) {
-      const supabaseAdmin = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-        { auth: { persistSession: false } }
-      );
-      
-      await supabaseAdmin
-        .from('image_jobs')
-        .update({ 
-          status: 'failed',
-          error_message: error.message
-        })
-        .eq('id', (await req.json()).jobId);
+    if (jobId) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          { auth: { persistSession: false } }
+        );
+        
+        await supabaseAdmin
+          .from('image_jobs')
+          .update({ 
+            status: 'failed',
+            error_message: error.message
+          })
+          .eq('id', jobId);
+      } catch (updateError) {
+        console.error('Failed to update job with error status:', updateError);
+      }
     }
 
     return new Response(
