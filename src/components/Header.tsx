@@ -1,10 +1,14 @@
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Menu, X, User } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/contexts/AuthContext"
 import logo from "@/assets/picperf-logo.png"
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { user, profile, signOut } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 border-b border-border/50">
@@ -36,8 +40,26 @@ const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost">Sign In</Button>
-            <Button variant="hero">Get Started Free</Button>
+            {user ? (
+              <>
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4" />
+                  <span>{profile?.display_name || 'User'}</span>
+                </div>
+                <Button variant="ghost" onClick={() => signOut()}>
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth')}>
+                  Sign In
+                </Button>
+                <Button variant="hero" onClick={() => navigate('/auth')}>
+                  Get Started Free
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -66,8 +88,26 @@ const Header = () => {
                 Contact
               </a>
               <div className="flex flex-col gap-2 mt-4">
-                <Button variant="ghost" className="justify-start">Sign In</Button>
-                <Button variant="hero">Get Started Free</Button>
+                {user ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm p-2">
+                      <User className="h-4 w-4" />
+                      <span>{profile?.display_name || 'User'}</span>
+                    </div>
+                    <Button variant="ghost" className="justify-start" onClick={() => signOut()}>
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" className="justify-start" onClick={() => navigate('/auth')}>
+                      Sign In
+                    </Button>
+                    <Button variant="hero" onClick={() => navigate('/auth')}>
+                      Get Started Free
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>
