@@ -16,15 +16,40 @@ const EarlyAccess = () => {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Welcome to Early Access! 🎉",
-        description: "You'll be among the first to try PicPerf.ai when we launch.",
+    try {
+      const response = await fetch("https://formspree.io/f/myzpeqrp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          _subject: "New PicPerf.ai Early Access Signup",
+        }),
       })
-      setEmail("")
+
+      if (response.ok) {
+        toast({
+          title: "Welcome to Early Access! 🎉",
+          description: "You'll be among the first to try PicPerf.ai when we launch.",
+        })
+        setEmail("")
+      } else {
+        toast({
+          title: "Oops! Something went wrong",
+          description: "Please try again later.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Oops! Something went wrong",
+        description: "Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
