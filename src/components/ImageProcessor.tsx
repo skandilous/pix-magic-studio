@@ -34,6 +34,7 @@ const ImageProcessor = () => {
   const [jobs, setJobs] = useState<ImageJob[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<BackgroundTemplate | null>(null);
+  const [selectedBgColor, setSelectedBgColor] = useState<string>('');
 
   const fetchJobs = useCallback(async () => {
     if (!user) return;
@@ -139,7 +140,7 @@ const ImageProcessor = () => {
 
     try {
       const { error } = await supabase.functions.invoke('process-image', {
-        body: { jobId }
+        body: { jobId, bgColor: selectedBgColor }
       });
 
       if (error) throw error;
@@ -392,6 +393,48 @@ const ImageProcessor = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Background Options */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Background Options</CardTitle>
+          <CardDescription>
+            Choose a solid color background for your processed images
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Solid Color Background</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="color"
+                  value={selectedBgColor}
+                  onChange={(e) => setSelectedBgColor(e.target.value)}
+                  className="w-12 h-8 rounded border"
+                />
+                <input
+                  type="text"
+                  value={selectedBgColor}
+                  onChange={(e) => setSelectedBgColor(e.target.value)}
+                  placeholder="#ffffff"
+                  className="flex-1 px-3 py-1 border rounded text-sm"
+                />
+                {selectedBgColor && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedBgColor('')}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Enter a hex color code or use the color picker</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Background Templates */}
       <BackgroundTemplates onSelectTemplate={handleTemplateSelect} />

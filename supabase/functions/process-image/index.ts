@@ -24,6 +24,7 @@ serve(async (req) => {
   try {
     const requestBody = await req.json();
     jobId = requestBody.jobId;
+    const bgColor = requestBody.bgColor;
     
     if (!jobId) {
       throw new Error("Job ID is required");
@@ -78,6 +79,11 @@ serve(async (req) => {
     const formData = new FormData();
     formData.append('image_file', imageData, 'image.jpg');
     formData.append('size', 'auto');
+    
+    // Add background color if specified
+    if (bgColor) {
+      formData.append('bg_color', bgColor);
+    }
 
     console.log("Calling remove.bg API...");
     
