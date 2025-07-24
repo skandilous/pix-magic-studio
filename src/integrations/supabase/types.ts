@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      image_jobs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          metadata: Json | null
+          original_file_path: string
+          processed_file_path: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          metadata?: Json | null
+          original_file_path: string
+          processed_file_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          metadata?: Json | null
+          original_file_path?: string
+          processed_file_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
