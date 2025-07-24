@@ -61,6 +61,7 @@ export type Database = {
           id: string
           images_processed: number | null
           preferences: Json | null
+          subscription_status: string | null
           subscription_tier: string | null
           updated_at: string
           usage_limit: number | null
@@ -72,6 +73,7 @@ export type Database = {
           id: string
           images_processed?: number | null
           preferences?: Json | null
+          subscription_status?: string | null
           subscription_tier?: string | null
           updated_at?: string
           usage_limit?: number | null
@@ -83,9 +85,52 @@ export type Database = {
           id?: string
           images_processed?: number | null
           preferences?: Json | null
+          subscription_status?: string | null
           subscription_tier?: string | null
           updated_at?: string
           usage_limit?: number | null
+        }
+        Relationships: []
+      }
+      subscribers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          stripe_customer_id: string | null
+          subscribed: boolean
+          subscription_end: string | null
+          subscription_id: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscribed?: boolean
+          subscription_end?: string | null
+          subscription_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

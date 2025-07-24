@@ -27,9 +27,12 @@ const Header = () => {
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
               Features
             </a>
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+            <button 
+              onClick={() => navigate('/pricing')}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
               Pricing
-            </a>
+            </button>
             <a href="#examples" className="text-muted-foreground hover:text-foreground transition-colors">
               Examples
             </a>
@@ -78,9 +81,12 @@ const Header = () => {
               <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
                 Features
               </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+              <button 
+                onClick={() => navigate('/pricing')}
+                className="text-muted-foreground hover:text-foreground transition-colors text-left"
+              >
                 Pricing
-              </a>
+              </button>
               <a href="#examples" className="text-muted-foreground hover:text-foreground transition-colors">
                 Examples
               </a>

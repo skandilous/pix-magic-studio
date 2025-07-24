@@ -379,25 +379,68 @@ const ImageProcessor = () => {
       {profile && (
         <Card>
           <CardHeader>
-            <CardTitle>Usage This Month</CardTitle>
+            <CardTitle>Your Plan & Usage</CardTitle>
             <CardDescription>
-              {profile.subscription_tier === 'free' ? 'Free plan' : `${profile.subscription_tier} plan`}
+              {profile.subscription_tier === 'free' ? 'Free plan' : 
+               profile.subscription_tier === 'pro' ? 'Pro plan' : 
+               profile.subscription_tier === 'unlimited' ? 'Unlimited plan' : 
+               `${profile.subscription_tier} plan`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Images processed</span>
-                <span>{profile.images_processed}/{profile.usage_limit}</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Images processed this month</span>
+                  <span>
+                    {profile.images_processed}/
+                    {profile.usage_limit === 999999 ? '∞' : profile.usage_limit}
+                  </span>
+                </div>
+                <Progress 
+                  value={profile.usage_limit === 999999 
+                    ? 0 
+                    : (profile.images_processed / profile.usage_limit) * 100} 
+                  className="h-2"
+                />
               </div>
-              <Progress 
-                value={(profile.images_processed / profile.usage_limit) * 100} 
-                className="h-2"
-              />
-              {profile.images_processed >= profile.usage_limit && (
-                <p className="text-sm text-destructive">
-                  Upgrade your plan to process more images this month.
-                </p>
+              
+              {profile.subscription_tier === 'free' && (
+                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-sm">Upgrade for more features:</h4>
+                  <ul className="text-xs space-y-1 text-muted-foreground">
+                    <li>• Remove watermarks from exports</li>
+                    <li>• HD quality downloads</li>
+                    <li>• Access to premium backgrounds</li>
+                    <li>• Priority support</li>
+                  </ul>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/pricing'}
+                  >
+                    View Plans
+                  </Button>
+                </div>
+              )}
+              
+              {profile.images_processed >= profile.usage_limit && profile.subscription_tier !== 'unlimited' && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-sm text-destructive">Usage limit reached</h4>
+                  <p className="text-xs text-muted-foreground">
+                    You've processed all {profile.usage_limit} images for this month. 
+                    Upgrade your plan to continue processing images.
+                  </p>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/pricing'}
+                  >
+                    Upgrade Now
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>

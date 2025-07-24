@@ -66,9 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile fetch to avoid deadlock
-          setTimeout(() => {
-            fetchProfile(session.user.id);
+          // Defer profile fetch and subscription check to avoid deadlock
+          setTimeout(async () => {
+            await fetchProfile(session.user.id);
+            await checkSubscription();
           }, 0);
         } else {
           setProfile(null);
@@ -79,12 +80,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
+        await checkSubscription();
       }
       
       setLoading(false);
@@ -92,6 +94,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (!error && data) {
+        // Profile will be updated by the edge function, so refetch it
+        if (user) {
+          await fetchProfile(user.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+    }
+  };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -155,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
+      await checkSubscription();
     }
   };
 
