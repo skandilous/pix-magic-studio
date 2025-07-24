@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Image as ImageIcon, Loader2, Download, Trash2 } from 'lucide-react';
+import BackgroundTemplates from './BackgroundTemplates';
 
 interface ImageJob {
   id: string;
@@ -17,6 +18,14 @@ interface ImageJob {
   created_at: string;
 }
 
+interface BackgroundTemplate {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  isPremium?: boolean;
+}
+
 const ImageProcessor = () => {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
@@ -24,6 +33,7 @@ const ImageProcessor = () => {
   const [processing, setProcessing] = useState(false);
   const [jobs, setJobs] = useState<ImageJob[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<BackgroundTemplate | null>(null);
 
   const fetchJobs = useCallback(async () => {
     if (!user) return;
@@ -239,6 +249,14 @@ const ImageProcessor = () => {
     }
   };
 
+  const handleTemplateSelect = (template: BackgroundTemplate) => {
+    setSelectedTemplate(template);
+    toast({
+      title: "Background selected",
+      description: `Selected ${template.name} as background template.`
+    });
+  };
+
   if (!user) {
     return (
       <div className="text-center py-12">
@@ -370,6 +388,40 @@ const ImageProcessor = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Background Templates */}
+      <BackgroundTemplates onSelectTemplate={handleTemplateSelect} />
+
+      {selectedTemplate && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Selected Background</CardTitle>
+            <CardDescription>
+              {selectedTemplate.name} - {selectedTemplate.description}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <img
+                src={selectedTemplate.imageUrl}
+                alt={selectedTemplate.name}
+                className="w-20 h-15 object-cover rounded-lg border"
+              />
+              <div className="flex-1">
+                <p className="font-medium">{selectedTemplate.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedTemplate.description}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedTemplate(null)}
+              >
+                Remove
+              </Button>
             </div>
           </CardContent>
         </Card>
