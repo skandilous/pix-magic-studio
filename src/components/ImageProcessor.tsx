@@ -4,8 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Image as ImageIcon, Loader2, Download, Trash2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, Download, Trash2, Palette, Monitor, Settings } from 'lucide-react';
 import BackgroundTemplates from './BackgroundTemplates';
 import { PlatformSizing, PlatformSize } from './PlatformSizing';
 
@@ -278,6 +279,20 @@ const ImageProcessor = () => {
     );
   }
 
+  const getImagePreview = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from('originals')
+      .download(filePath);
+    
+    if (data) {
+      return URL.createObjectURL(data);
+    }
+    return null;
+  };
+
+  const pendingJobs = jobs.filter(job => job.status === 'pending');
+  const currentJob = pendingJobs[0]; // Show first pending job for editing
+
   return (
     <div className="space-y-6">
       {/* Upload Area */}
@@ -336,18 +351,154 @@ const ImageProcessor = () => {
         </CardContent>
       </Card>
 
-      {/* Jobs List */}
-      {jobs.length > 0 && (
+      {/* Image Editor - Only show when there's a pending job */}
+      {currentJob && (
         <Card>
           <CardHeader>
-            <CardTitle>Your Images</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Edit Image: {currentJob.original_file_path.split('/').pop()}
+            </CardTitle>
             <CardDescription>
-              Track the status of your image processing jobs
+              Customize your image with the options below, then process when ready.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Image Preview */}
+              <div className="space-y-4">
+                <h3 className="font-medium">Original Image</h3>
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Preview loading...</span>
+                </div>
+              </div>
+
+              {/* Feature Tabs */}
+              <div className="space-y-4">
+                <Tabs defaultValue="background" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="background" className="flex items-center gap-2">
+                      <Palette className="h-4 w-4" />
+                      Background
+                    </TabsTrigger>
+                    <TabsTrigger value="platform" className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      Platform
+                    </TabsTrigger>
+                    <TabsTrigger value="templates" className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Templates
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="background" className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Solid Color Background</label>
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="color"
+                          value={selectedBgColor}
+                          onChange={(e) => setSelectedBgColor(e.target.value)}
+                          className="w-12 h-8 rounded border"
+                        />
+                        <input
+                          type="text"
+                          value={selectedBgColor}
+                          onChange={(e) => setSelectedBgColor(e.target.value)}
+                          placeholder="#ffffff"
+                          className="flex-1 px-3 py-1 border rounded text-sm"
+                        />
+                        {selectedBgColor && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedBgColor('')}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Enter a hex color code or use the color picker</p>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="platform" className="space-y-4">
+                    <PlatformSizing 
+                      selectedPlatform={selectedPlatform}
+                      onSelectPlatform={setSelectedPlatform}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="templates" className="space-y-4">
+                    <BackgroundTemplates onSelectTemplate={handleTemplateSelect} />
+                    {selectedTemplate && (
+                      <div className="p-3 border rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={selectedTemplate.imageUrl}
+                            alt={selectedTemplate.name}
+                            className="w-12 h-9 object-cover rounded border"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{selectedTemplate.name}</p>
+                            <p className="text-xs text-muted-foreground">{selectedTemplate.description}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedTemplate(null)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+
+                {/* Process Button */}
+                <div className="pt-4 border-t">
+                  <Button
+                    onClick={() => processImage(currentJob.id)}
+                    disabled={processing}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {processing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing Image...
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Process Image
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    This will apply all selected options to your image
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Completed/Processing Jobs */}
+      {jobs.filter(job => job.status !== 'pending').length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Processed Images</CardTitle>
+            <CardDescription>
+              Download your completed images or track processing status
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {jobs.map((job) => (
+              {jobs.filter(job => job.status !== 'pending').map((job) => (
                 <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-4">
                     <ImageIcon className="h-8 w-8 text-muted-foreground" />
@@ -367,26 +518,14 @@ const ImageProcessor = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {job.status === 'pending' && (
-                      <Button
-                        onClick={() => processImage(job.id)}
-                        disabled={processing}
-                        size="sm"
-                      >
-                        {processing ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          'Process'
-                        )}
-                      </Button>
-                    )}
                     {job.status === 'completed' && job.processed_file_path && (
                       <Button
                         onClick={() => downloadImage(job.processed_file_path!)}
                         size="sm"
                         variant="outline"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
                       </Button>
                     )}
                     <Button
@@ -399,88 +538,6 @@ const ImageProcessor = () => {
                   </div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Background Options */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Background Options</CardTitle>
-          <CardDescription>
-            Choose a solid color background for your processed images
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Solid Color Background</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="color"
-                  value={selectedBgColor}
-                  onChange={(e) => setSelectedBgColor(e.target.value)}
-                  className="w-12 h-8 rounded border"
-                />
-                <input
-                  type="text"
-                  value={selectedBgColor}
-                  onChange={(e) => setSelectedBgColor(e.target.value)}
-                  placeholder="#ffffff"
-                  className="flex-1 px-3 py-1 border rounded text-sm"
-                />
-                {selectedBgColor && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedBgColor('')}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">Enter a hex color code or use the color picker</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Platform Auto-Sizing */}
-      <PlatformSizing 
-        selectedPlatform={selectedPlatform}
-        onSelectPlatform={setSelectedPlatform}
-      />
-
-      {/* Background Templates */}
-      <BackgroundTemplates onSelectTemplate={handleTemplateSelect} />
-
-      {selectedTemplate && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Selected Background</CardTitle>
-            <CardDescription>
-              {selectedTemplate.name} - {selectedTemplate.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <img
-                src={selectedTemplate.imageUrl}
-                alt={selectedTemplate.name}
-                className="w-20 h-15 object-cover rounded-lg border"
-              />
-              <div className="flex-1">
-                <p className="font-medium">{selectedTemplate.name}</p>
-                <p className="text-sm text-muted-foreground">{selectedTemplate.description}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedTemplate(null)}
-              >
-                Remove
-              </Button>
             </div>
           </CardContent>
         </Card>
