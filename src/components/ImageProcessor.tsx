@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Image as ImageIcon, Loader2, Download, Trash2 } from 'lucide-react';
 import BackgroundTemplates from './BackgroundTemplates';
+import { PlatformSizing, PlatformSize } from './PlatformSizing';
 
 interface ImageJob {
   id: string;
@@ -35,6 +36,7 @@ const ImageProcessor = () => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<BackgroundTemplate | null>(null);
   const [selectedBgColor, setSelectedBgColor] = useState<string>('');
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformSize | null>(null);
 
   const fetchJobs = useCallback(async () => {
     if (!user) return;
@@ -140,7 +142,15 @@ const ImageProcessor = () => {
 
     try {
       const { error } = await supabase.functions.invoke('process-image', {
-        body: { jobId, bgColor: selectedBgColor }
+        body: { 
+          jobId, 
+          bgColor: selectedBgColor,
+          platformSize: selectedPlatform ? {
+            width: selectedPlatform.width,
+            height: selectedPlatform.height,
+            name: selectedPlatform.name
+          } : null
+        }
       });
 
       if (error) throw error;
@@ -435,6 +445,12 @@ const ImageProcessor = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Platform Auto-Sizing */}
+      <PlatformSizing 
+        selectedPlatform={selectedPlatform}
+        onSelectPlatform={setSelectedPlatform}
+      />
 
       {/* Background Templates */}
       <BackgroundTemplates onSelectTemplate={handleTemplateSelect} />

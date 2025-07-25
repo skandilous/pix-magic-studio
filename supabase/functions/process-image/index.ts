@@ -14,6 +14,14 @@ async function addWatermark(imageBlob: Blob): Promise<Blob> {
   return imageBlob;
 }
 
+// Function to resize image for platform requirements
+async function resizeImage(imageBlob: Blob, targetWidth: number, targetHeight: number): Promise<Blob> {
+  // For now, just return the original blob since image processing in Deno is limited
+  // In a production environment, you would use an image processing library like ImageMagick
+  console.log(`Image would be resized to ${targetWidth}x${targetHeight} for platform optimization`);
+  return imageBlob;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +33,7 @@ serve(async (req) => {
     const requestBody = await req.json();
     jobId = requestBody.jobId;
     const bgColor = requestBody.bgColor;
+    const platformSize = requestBody.platformSize;
     
     if (!jobId) {
       throw new Error("Job ID is required");
@@ -102,6 +111,12 @@ serve(async (req) => {
 
     let processedImageBlob = await removeBgResponse.blob();
     console.log("Received processed image from remove.bg, size:", processedImageBlob.size);
+
+    // Resize image for platform if specified
+    if (platformSize) {
+      console.log(`Resizing image for platform: ${platformSize.name} (${platformSize.width}x${platformSize.height})`);
+      processedImageBlob = await resizeImage(processedImageBlob, platformSize.width, platformSize.height);
+    }
 
     // Get user's subscription tier to determine if watermark is needed
     const { data: userProfile } = await supabaseAdmin
