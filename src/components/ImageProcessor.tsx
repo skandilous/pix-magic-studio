@@ -38,6 +38,7 @@ const ImageProcessor = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<BackgroundTemplate | null>(null);
   const [selectedBgColor, setSelectedBgColor] = useState<string>('');
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformSize | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fetchJobs = useCallback(async () => {
     if (!user) return;
@@ -58,6 +59,31 @@ const ImageProcessor = () => {
   React.useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
+
+  const getImagePreview = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from('originals')
+      .download(filePath);
+    
+    if (data) {
+      return URL.createObjectURL(data);
+    }
+    return null;
+  };
+
+  const pendingJobs = jobs.filter(job => job.status === 'pending');
+  const currentJob = pendingJobs[0]; // Show first pending job for editing
+
+  // Load preview when current job changes
+  React.useEffect(() => {
+    if (currentJob?.original_file_path) {
+      getImagePreview(currentJob.original_file_path).then(url => {
+        setPreviewUrl(url);
+      });
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [currentJob?.original_file_path]);
 
   const handleFileUpload = async (file: File) => {
     if (!user || !profile) {
@@ -279,19 +305,6 @@ const ImageProcessor = () => {
     );
   }
 
-  const getImagePreview = async (filePath: string) => {
-    const { data } = await supabase.storage
-      .from('originals')
-      .download(filePath);
-    
-    if (data) {
-      return URL.createObjectURL(data);
-    }
-    return null;
-  };
-
-  const pendingJobs = jobs.filter(job => job.status === 'pending');
-  const currentJob = pendingJobs[0]; // Show first pending job for editing
 
   return (
     <div className="space-y-6">
@@ -368,9 +381,19 @@ const ImageProcessor = () => {
               {/* Image Preview */}
               <div className="space-y-4">
                 <h3 className="font-medium">Original Image</h3>
-                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">Preview loading...</span>
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                  {previewUrl ? (
+                    <img 
+                      src={previewUrl} 
+                      alt="Original uploaded image" 
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <>
+                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <span className="ml-2 text-muted-foreground">Preview loading...</span>
+                    </>
+                  )}
                 </div>
               </div>
 
